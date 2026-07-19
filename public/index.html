@@ -266,7 +266,7 @@
 <script>
 // ── CONFIG: same-origin (the bot serves this client) ──
 const params = new URLSearchParams(location.search);
-const socket = io({ transports:['websocket','polling'] });   // same origin
+const socket = io();   // same origin; socket.io negotiates polling→websocket
 const S = { chats:[], msgs:[], msgIds:new Set(), chatId:null, chatName:'', replyTo:null, filter:'' };
 let pendingAttach = null;
 let AUTH = { role:'guest', approved:false, deviceId:null, headKey:null };
