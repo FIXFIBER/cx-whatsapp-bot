@@ -253,9 +253,9 @@
 <!-- Share modal -->
 <div class="ov" id="share-modal">
   <div class="ov-box">
-    <h3>Link a phone to this WhatsApp number</h3>
-    <p>Scan this QR with the <b>main WhatsApp on the phone number</b> (WhatsApp → Linked devices → Link a device). After it pairs, this web client is live.</p>
-    <div id="share-qr" style="display:flex;justify-content:center;padding:8px"><div class="status-msg">Waiting for QR…</div></div>
+    <h3>Share access to this WhatsApp</h3>
+    <p>Scan this QR with another phone/PC camera, or copy the link and open it. It opens the web client — after you approve the device in <b>My Devices</b>. Only you (the owner) can make these; shared users cannot re-share.</p>
+    <div id="share-qr" style="display:flex;justify-content:center;padding:8px"><div class="status-msg">Generating…</div></div>
     <div class="ov-actions">
       <button class="mini" onclick="copyShareLink()">Copy link</button>
       <button class="mini danger" onclick="document.getElementById('share-modal').classList.remove('show')">Close</button>
@@ -472,23 +472,22 @@ function send(){
 }
 document.getElementById('msg-input').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} });
 
-// ── SHARE = WhatsApp pairing QR (head only) ─────────────
+// ── SHARE = generate an invite QR on demand (head only) ──
+// Works whether or not WhatsApp is currently paired. The QR encodes a live
+// invite link on the CURRENT serving host (no stale PUBLIC_URL baked in).
+// Members (shared users) never see this — button hidden + guarded server-side.
 function openShare(){
-  if (AUTH.role!=='head') { toast('Only the owner can link a new phone'); return; }
+  if (AUTH.role!=='head') { toast('Only the owner can share access'); return; }
   const m=document.getElementById('share-modal'); m.classList.add('show');
-  document.getElementById('share-qr').innerHTML='<div class="status-msg">Waiting for QR…</div>';
-  // Last QR if already generated; live updates arrive via the global 'qr' listener.
-  if (window.__lastQR) document.getElementById('share-qr').innerHTML='<img src="'+window.__lastQR+'" style="width:240px;height:240px;background:#fff;padding:8px;border-radius:8px">';
+  const box=document.getElementById('share-qr');
+  box.innerHTML='<div class="status-msg">Generating QR…</div>';
+  const key=AUTH.headKey||'';
+  fetch('/api/invite-qr?key='+encodeURIComponent(key)).then(r=>r.json()).then(d=>{
+    if(!d.ok){ box.innerHTML='<div class="status-msg">'+(d.error||'Failed')+'</div>'; return; }
+    window.__shareUrl=d.inviteUrl;
+    box.innerHTML='<img src="'+d.qr+'" style="width:240px;height:240px;background:#fff;padding:8px;border-radius:8px">';
+  }).catch(()=>{ box.innerHTML='<div class="status-msg">Failed — check connection</div>'; });
 }
-// Global QR listener feeds BOTH the pairing screen and the Share modal.
-socket.on('qr', url=>{
-  window.__lastQR = url;
-  document.getElementById('qr-img').innerHTML = url ? '<img src="'+url+'">' : '';
-  document.getElementById('status-msg').textContent='Scan this QR with your main WhatsApp number.';
-  if (AUTH.role==='head' && document.getElementById('share-modal').classList.contains('show')) {
-    document.getElementById('share-qr').innerHTML='<img src="'+url+'" style="width:240px;height:240px;background:#fff;padding:8px;border-radius:8px">';
-  }
-});
 function copyShareLink(){ if(window.__shareUrl) navigator.clipboard.writeText(window.__shareUrl).then(()=>toast('Link copied')); }
 
 toast('Connecting…');

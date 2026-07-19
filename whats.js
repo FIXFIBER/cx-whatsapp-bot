@@ -848,7 +848,9 @@ app.get('/api/share-qr', async (req, res) => {
     const key = req.headers['x-admin-key'] || req.query.key || '';
     if (!access.isHead(key)) return res.status(403).json({ error: 'head key required' });
     try {
-        const base = (PUBLIC_URL || (req.protocol + '://' + req.get('host'))).replace(/\/$/, '');
+        // Derive the base from the LIVE serving host, not a stale PUBLIC_URL env
+        // (a dead/old domain would bake a broken link into the QR → 404 on scan).
+        const base = (req.protocol + '://' + req.get('host')).replace(/\/$/, '');
         const shareUrl = base + '/app';
         const dataUrl = await qrcode.toDataURL(shareUrl, { width: 320, margin: 1 });
         res.json({ ok: true, url: shareUrl, qr: dataUrl });
@@ -865,8 +867,8 @@ app.get('/api/invite-qr', async (req, res) => {
     if (!access.isHead(key)) return res.status(403).json({ error: 'head key required' });
     try {
         const code = access.createInvite('head');
-        // The client encodes this as a link the device opens to redeem.
-        const base = (PUBLIC_URL || (req.protocol + '://' + req.get('host'))).replace(/\/$/, '');
+        // Derive base from the LIVE serving host (not a stale PUBLIC_URL).
+        const base = (req.protocol + '://' + req.get('host')).replace(/\/$/, '');
         const inviteUrl = base + '/app?invite=' + code;
         const dataUrl = await qrcode.toDataURL(inviteUrl, { width: 320, margin: 1 });
         res.json({ ok: true, code, inviteUrl, qr: dataUrl });
@@ -3589,7 +3591,7 @@ async function showShareQR() {
   document.getElementById('share-qr').innerHTML = '<div class="loader"></div>';
   try {
     const r = await fetch('/api/share-qr').then(x => x.json());
-    if (!r.ok) { document.getElementById('share-qr').innerHTML = '<div style="color:var(--tx2);font-size:13px;text-align:center">'+ (r.error||'Not configured') +'<br><br>Set PUBLIC_URL (e.g. https://cx.fob.net.ng) on the server.</div>'; return; }
+    if (!r.ok) { document.getElementById('share-qr').innerHTML = '<div style="color:var(--tx2);font-size:13px;text-align:center">'+(r.error||'Not configured')+'</div>'; return; }
     document.getElementById('share-host').textContent = new URL(r.url).host;
     document.getElementById('share-qr').innerHTML = '<img src="'+r.qr+'" style="width:240px;height:240px;border-radius:8px;background:#fff;padding:8px">';
     window.__shareUrl = r.url;
