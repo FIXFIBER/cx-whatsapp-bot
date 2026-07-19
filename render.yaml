@@ -1,0 +1,32 @@
+# Render backend deploy manifest
+# The WhatsApp bot is STATEFUL (persistent socket + Baileys auth session),
+# so it MUST run on a long-lived server like Render — NOT Vercel.
+# The frontend (web-client/) is deployed separately on Vercel and connects
+# to this service over socket.io (CORS is *).
+
+services:
+  - type: web
+    name: cx-whatsapp-bot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter          # or standard — needs to stay awake (no free tier spin-down for WS)
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: "3001"
+      - key: DATA_DIR
+        value: "/data"      # persistent disk mount (see disks below)
+      - key: PUBLIC_URL
+        value: "https://cx.fob.net.ng"   # used for the Share-Access QR
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+    # Persistent disk: keeps the WhatsApp session + cache across deploys/restarts.
+    # WITHOUT this, every deploy re-scans the QR and you lose the link.
+    disks:
+      - name: cx-data
+        mountPath: /data
+        sizeGB: 1
+
+# Build/start are defined in Dockerfile (npm ci && npm start).

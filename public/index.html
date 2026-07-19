@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>CX — WhatsApp Web</title>
+<style>
+  :root{
+    --bg:#0b141a; --panel:#111b21; --bar:#202c33; --sbg:#0b141a;
+    --g:#00a884; --gd:#008f72; --tx:#e9edef; --tx2:#8696a0; --brdr:#2a3942;
+    --hov:#2a3942; --bub-out:#005c4b; --bub-in:#1f2c34; --shd:rgba(0,0,0,.4);
+    --blue:#53bdeb; --red:#f15c6d;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overflow:hidden}
+  #app{display:flex;height:100dvh;width:100%}
+  /* Sidebar */
+  #sidebar{width:100%;max-width:420px;background:var(--panel);display:flex;flex-direction:column;
+    border-right:1px solid var(--brdr);flex-shrink:0;position:relative}
+  .s-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;
+    background:var(--bar);flex-shrink:0}
+  .s-hdr-l{display:flex;align-items:center;gap:10px}
+  .my-av{width:36px;height:36px;border-radius:50%;background:var(--g);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-weight:600}
+  .app-name{font-weight:600;font-size:15px}
+  .s-actions{display:flex;gap:6px}
+  .icon-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;color:var(--tx);
+    display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .icon-btn:active{background:var(--hov)}
+  .icon-btn svg{width:20px;height:20px;fill:currentColor}
+  .s-search{padding:8px 12px;background:var(--bar)}
+  .s-si{display:flex;align-items:center;gap:8px;background:var(--sbg);border-radius:18px;padding:9px 14px}
+  .s-si input{flex:1;border:none;background:transparent;outline:none;color:var(--tx);font-size:14px}
+  .s-si svg{width:18px;height:18px;fill:var(--tx2)}
+  #chat-list{flex:1;overflow-y:auto}
+  .ci{display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;border-bottom:1px solid rgba(134,150,160,.08)}
+  .ci:active{background:var(--hov)}
+  .ci-av{width:48px;height:48px;border-radius:50%;background:var(--g);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-weight:600;font-size:18px;flex-shrink:0;overflow:hidden}
+  .ci-av img{width:100%;height:100%;object-fit:cover}
+  .ci-main{flex:1;min-width:0}
+  .ci-top{display:flex;justify-content:space-between;align-items:baseline}
+  .ci-name{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ci-time{font-size:12px;color:var(--tx2);flex-shrink:0}
+  .ci-last{font-size:13px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  /* Chat view */
+  #chatview{flex:1;display:none;flex-direction:column;background:var(--bg);min-width:0}
+  .c-hdr{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bar);flex-shrink:0}
+  .ch-back{background:none;border:none;color:var(--tx);font-size:26px;line-height:1;cursor:pointer;padding:0 4px 0 0}
+  .c-hdr-av{width:40px;height:40px;border-radius:50%;background:var(--g);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-weight:600;overflow:hidden;flex-shrink:0}
+  .c-hdr-av img{width:100%;height:100%;object-fit:cover}
+  .c-hdr-info{flex:1;min-width:0}
+  .c-hdr-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .c-hdr-sub{font-size:12px;color:var(--tx2)}
+  #messages{flex:1;overflow-y:auto;padding:14px 10px;display:flex;flex-direction:column;gap:4px}
+  .m-row{display:flex;flex-direction:column}
+  .m-row.out{align-items:flex-end}
+  .m-bub{max-width:78%;padding:7px 10px 6px;border-radius:10px;font-size:14.5px;line-height:1.35;
+    background:var(--bub-in);position:relative;word-wrap:break-word}
+  .m-row.out .m-bub{background:var(--bub-out)}
+  .m-bub img.m-img,.m-bub video{max-width:100%;border-radius:8px;display:block;margin:2px 0}
+  .m-bub audio{max-width:240px;margin:4px 0}
+  .m-bub a.m-doc{color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+  .m-meta{font-size:10px;color:var(--tx2);margin-top:2px;display:flex;gap:4px;justify-content:flex-end}
+  /* Input */
+  #input-area{display:flex;align-items:flex-end;gap:8px;padding:8px 10px;background:var(--bar);flex-shrink:0}
+  .att-btn{width:42px;height:42px;border-radius:50%;background:transparent;border:none;color:var(--tx2);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+  .att-btn svg{width:24px;height:24px;fill:currentColor}
+  #att-preview{display:none;align-items:center;gap:8px;padding:6px 10px;background:var(--bar);border-top:1px solid var(--brdr)}
+  #att-preview.show{display:flex}
+  #att-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover}
+  #att-name{font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .iw{flex:1;background:var(--sbg);border-radius:22px;padding:9px 14px;display:flex;align-items:flex-end}
+  #msg-input{flex:1;border:none;outline:none;background:transparent;color:var(--tx);font-size:15px;resize:none;max-height:120px;font-family:inherit;line-height:20px}
+  #send-btn{width:46px;height:46px;border-radius:50%;background:var(--g);border:none;display:flex;
+    align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+  #send-btn svg{width:20px;height:20px;fill:#fff}
+  /* QR / status */
+  #qr-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
+  #qr-img{background:#fff;padding:16px;border-radius:12px}
+  #qr-img img{display:block;width:240px;height:240px}
+  .status-msg{color:var(--tx2);font-size:14px;max-width:300px}
+  .badge{background:var(--bar);padding:8px 14px;border-radius:20px;font-size:13px;color:var(--tx2)}
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#2a3942;color:#fff;
+    padding:10px 18px;border-radius:22px;font-size:13px;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  /* Auth screen (head/owner gate) */
+  #auth-screen{position:fixed;inset:0;z-index:200;background:var(--bg);display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center}
+  #auth-screen h2{margin:0;font-size:20px}
+  #auth-screen p{color:var(--tx2);font-size:14px;max-width:340px;margin:0}
+  #head-key-input{width:100%;max-width:340px;padding:14px 16px;border-radius:12px;border:1px solid var(--brdr);
+    background:var(--panel);color:var(--tx);font-size:15px;outline:none}
+  .big-btn{width:100%;max-width:340px;padding:14px;border:none;border-radius:12px;background:var(--g);color:#fff;
+    font-size:15px;font-weight:600;cursor:pointer}
+  .big-btn:active{background:var(--gd)}
+  .big-btn.ghost{background:var(--panel);color:var(--tx);border:1px solid var(--brdr)}
+  #auth-msg{min-height:18px;color:var(--red);font-size:13px}
+  /* Head panel (owner-only device management) */
+  #head-panel{display:none;position:absolute;inset:0;z-index:50;background:var(--panel);
+    flex-direction:column;padding:0}
+  #head-panel.show{display:flex}
+  .hp-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bar);
+    border-bottom:1px solid var(--brdr);flex-shrink:0}
+  .hp-hdr h3{margin:0;font-size:16px}
+  .hp-body{flex:1;overflow-y:auto;padding:14px}
+  .hp-sec-title{font-size:12px;text-transform:uppercase;color:var(--tx2);letter-spacing:.5px;margin:6px 0 10px}
+  .dev-row{display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg);border-radius:10px;margin-bottom:8px}
+  .dev-name{flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tag{font-size:11px;padding:3px 9px;border-radius:10px;font-weight:600;flex-shrink:0}
+  .tag.head{background:var(--g);color:#fff}
+  .tag.ok{background:#1f3b30;color:var(--g)}
+  .tag.pend{background:#3b341f;color:#e0b040}
+  .mini{padding:7px 12px;border:none;border-radius:8px;background:var(--g);color:#fff;font-size:13px;cursor:pointer;flex-shrink:0}
+  .mini.danger{background:#3b2228;color:var(--red)}
+  .mini:active{opacity:.8}
+  .inv-box{background:var(--bg);border-radius:10px;padding:14px;margin-top:8px}
+  .inv-box input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--brdr);background:var(--panel);color:var(--tx);font-size:13px;margin:10px 0}
+  .inv-qr{display:flex;justify-content:center;margin:10px 0}
+  .inv-qr img{width:240px;height:240px;background:#fff;padding:10px;border-radius:10px}
+  /* Modal */
+  .ov{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px}
+  .ov.show{display:flex}
+  .ov-box{background:var(--panel);border-radius:14px;padding:20px;width:100%;max-width:380px;text-align:center}
+  .ov-box h3{margin:0 0 10px;font-size:17px}
+  .ov-box p{color:var(--tx2);font-size:13px;margin:0 0 14px}
+  .ov-actions{display:flex;gap:10px;margin-top:8px}
+  /* Desktop: side by side */
+  @media(min-width:821px){
+    #sidebar{width:380px}
+    #chatview{display:flex!important}
+    #qr-screen{display:none!important}
+  }
+  @media(max-width:820px){
+    #sidebar{position:absolute;inset:0;z-index:30;width:100%;max-width:none}
+    #chatview{position:absolute;inset:0;z-index:31;display:none}
+    #chatview.show{display:flex}
+    #sidebar.hide{display:none}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="s-hdr">
+      <div class="s-hdr-l">
+        <div class="my-av" id="main-avatar">CX</div>
+        <span class="app-name">CX WhatsApp</span>
+      </div>
+      <div class="s-actions">
+        <button class="icon-btn" title="Share / Invite" onclick="openShare()">
+          <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+        </button>
+        <button class="icon-btn" title="My devices (owner only)" onclick="openHeadPanel()" id="head-btn" style="display:none">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="s-search">
+      <div class="s-si">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input id="chat-search" placeholder="Search or type number..." oninput="handleSearch(this.value)">
+      </div>
+    </div>
+    <div id="chat-list"></div>
+    <!-- Head panel overlay -->
+    <div id="head-panel">
+      <div class="hp-hdr">
+        <h3>My Devices</h3>
+        <button class="icon-btn" onclick="closeHeadPanel()">✕</button>
+      </div>
+      <div class="hp-body">
+        <div class="hp-sec-title">Connected devices</div>
+        <div id="device-list"></div>
+        <div class="hp-sec-title">Invite a new device</div>
+        <button class="big-btn" onclick="genInvite()" id="gen-inv-btn">Generate invite QR</button>
+        <div id="inv-area" style="display:none">
+          <div class="inv-box">
+            <div class="inv-qr" id="invite-qr"></div>
+            <input id="invite-url" readonly>
+            <div class="ov-actions">
+              <button class="mini" onclick="copyInvite()">Copy link</button>
+              <button class="mini danger" onclick="document.getElementById('inv-area').style.display='none'">Close</button>
+            </div>
+          </div>
+        </div>
+        <div class="hp-sec-title" style="margin-top:18px">Head key (save this — it's your owner password)</div>
+        <div class="inv-box">
+          <input id="head-key-view" readonly>
+          <div class="ov-actions"><button class="mini" onclick="copyHeadKey()">Copy head key</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat view -->
+  <div id="chatview">
+    <div class="c-hdr">
+      <button class="ch-back" onclick="closeChat()">‹</button>
+      <div class="c-hdr-av u" id="c-av">?</div>
+      <div class="c-hdr-info">
+        <div class="c-hdr-name" id="c-name">—</div>
+        <div class="c-hdr-sub" id="c-sub">tap for info</div>
+      </div>
+    </div>
+    <div id="messages"><div class="status-msg" style="margin:auto">Select a chat</div></div>
+    <div id="att-preview">
+      <img id="att-thumb" style="display:none">
+      <span id="att-name"></span>
+      <button onclick="clearAttach()" style="background:none;border:none;color:var(--tx2);font-size:18px">✕</button>
+    </div>
+    <div id="input-area">
+      <button class="att-btn" onclick="document.getElementById('file-input').click()">
+        <svg viewBox="0 0 24 24"><path d="M16.5 6v11.5a4 4 0 1 1-8 0V5a2.5 2.5 0 0 1 5 0v10.5a1 1 0 1 1-2 0V6H10v9.5a2.5 2.5 0 0 0 5 0V5a4 4 0 0 0-8 0v12.5a5.5 5.5 0 0 0 11 0V6h-1.5z"/></svg>
+      </button>
+      <input id="file-input" type="file" accept="image/*,video/*,audio/*,application/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" style="display:none" onchange="handleAttach(this.files)">
+      <div class="iw">
+        <textarea id="msg-input" rows="1" placeholder="Type a message" oninput="autoGrow(this)"></textarea>
+      </div>
+      <button id="send-btn" onclick="send()">
+        <svg viewBox="0 0 24 24"><path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- QR / status screen -->
+  <div id="qr-screen">
+    <div id="qr-img"></div>
+    <div class="status-msg" id="status-msg">Connecting…</div>
+  </div>
+</div>
+
+<!-- Auth screen (owner/head gate) -->
+<div id="auth-screen">
+  <h2>CX WhatsApp — Owner access</h2>
+  <p id="auth-desc">This number is owned by its head device. Enter the head key (owner password) to unlock. If this is your first time, leave it blank and you become the owner.</p>
+  <input id="head-key-input" placeholder="Head key (leave blank to claim as owner)" autocomplete="off">
+  <button class="big-btn" onclick="doAuth()">Unlock / Claim as owner</button>
+  <div id="auth-msg"></div>
+  <p style="font-size:12px">Lost your head key? Redeem an invite from an already-connected device below.</p>
+  <input id="invite-code-input" placeholder="Or paste an invite code" style="width:100%;max-width:340px;padding:14px 16px;border-radius:12px;border:1px solid var(--brdr);background:var(--panel);color:var(--tx);font-size:15px;outline:none">
+  <button class="big-btn ghost" onclick="redeemPasted()">Join with invite code</button>
+</div>
+
+<!-- Share modal -->
+<div class="ov" id="share-modal">
+  <div class="ov-box">
+    <h3>Share access</h3>
+    <p>Scan this QR with any phone camera to open the web client connected to THIS WhatsApp number. One number, many devices.</p>
+    <div id="share-qr" style="display:flex;justify-content:center;padding:8px"><div class="status-msg">Loading…</div></div>
+    <div class="ov-actions">
+      <button class="mini" onclick="copyShareLink()">Copy link</button>
+      <button class="mini danger" onclick="document.getElementById('share-modal').classList.remove('show')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ── CONFIG: same-origin (the bot serves this client) ──
+const params = new URLSearchParams(location.search);
+const socket = io({ transports:['websocket','polling'] });   // same origin
+const S = { chats:[], msgs:[], msgIds:new Set(), chatId:null, chatName:'', replyTo:null, filter:'' };
+let pendingAttach = null;
+let AUTH = { role:'guest', approved:false, deviceId:null, headKey:null };
+const HEAD_KEY = localStorage.getItem('cx_head_key') || '';
+
+// ── AUTH (head/gateway model) ──────────────────────────
+// You (the head) hold the head key. Other devices join by scanning an invite QR.
+socket.on('auth_ok', d=>{
+  AUTH = { role:d.role, approved:!!d.approved||d.role==='head', deviceId:d.deviceId, headKey:d.headKey };
+  if (d.role==='head' && d.headKey) { localStorage.setItem('cx_head_key', d.headKey); }
+  document.getElementById('auth-screen').style.display='none';
+  if (AUTH.role==='head') {
+    document.getElementById('head-btn').style.display='flex';
+    document.getElementById('head-key-view').value = AUTH.headKey || '';
+    renderDevices(d.devices||[]);
+  }
+  socket.emit('get_chats');
+});
+socket.on('auth_fail', d=>{ showAuthScreen('Access denied: '+(d.reason||'unknown')+'.'); });
+socket.on('auth_required', ()=>{ if(AUTH.role!=='head') showAuthScreen('This device is not approved yet. Ask the head to approve it.'); });
+socket.on('invite_created', d=>{ showInviteQR(d.inviteUrl); });
+socket.on('devices', list=>{ if(AUTH.role==='head') renderDevices(list); });
+socket.on('device_approved', d=>{ if(AUTH.deviceId===d.deviceId){ AUTH.approved=true; toast('Device approved by head'); socket.emit('get_chats'); } });
+socket.on('device_removed', d=>{ if(AUTH.deviceId===d.deviceId){ AUTH.role='guest'; AUTH.approved=false; showAuthScreen('This device was removed by the head.'); } });
+
+function doAuth(){
+  const key = document.getElementById('head-key-input').value.trim();
+  socket.emit('auth', { key, name: navigator.userAgent.slice(0,40) });
+}
+function redeemPasted(){
+  const code = document.getElementById('invite-code-input').value.trim();
+  if(!code){ showAuthScreen('Paste an invite code first.'); return; }
+  socket.emit('redeem_invite', { code, name: navigator.userAgent.slice(0,40) });
+}
+function showAuthScreen(msg){
+  document.getElementById('auth-screen').style.display='flex';
+  if(msg) document.getElementById('auth-msg').textContent=msg;
+}
+function showInviteQR(url){
+  document.getElementById('inv-area').style.display='block';
+  document.getElementById('invite-qr').innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data='+encodeURIComponent(url)+'">';
+  document.getElementById('invite-url').value=url;
+}
+function genInvite(){ if(AUTH.role!=='head') return; socket.emit('create_invite', { key:AUTH.headKey, name:'head' }); }
+function renderDevices(list){
+  const box=document.getElementById('device-list');
+  if(!list||!list.length){ box.innerHTML='<div class="status-msg">No other devices yet.</div>'; return; }
+  box.innerHTML = list.map(d=>{
+    const tag = d.role==='head'?'<span class="tag head">HEAD</span>':(d.approved?'<span class="tag ok">APPROVED</span>':'<span class="tag pend">PENDING</span>');
+    let act='';
+    if(d.role!=='head'){
+      act = d.approved
+        ? '<button class="mini danger" onclick="removeDev(\''+d.id+'\')">Remove</button>'
+        : '<button class="mini" onclick="approveDev(\''+d.id+'\')">Approve</button> <button class="mini danger" onclick="removeDev(\''+d.id+'\')">Remove</button>';
+    }
+    return '<div class="dev-row">'+tag+'<span class="dev-name">'+esc(d.name)+'</span>'+act+'</div>';
+  }).join('');
+}
+function approveDev(id){ socket.emit('approve_device', { key:AUTH.headKey, id }); }
+function removeDev(id){ socket.emit('remove_device', { key:AUTH.headKey, id }); }
+function copyInvite(){ const i=document.getElementById('invite-url'); i.select(); document.execCommand('copy'); toast('Invite link copied'); }
+function copyHeadKey(){ const i=document.getElementById('head-key-view'); i.select(); document.execCommand('copy'); toast('Head key copied'); }
+
+function openHeadPanel(){ if(AUTH.role!=='head') return; document.getElementById('head-panel').classList.add('show'); }
+function closeHeadPanel(){ document.getElementById('head-panel').classList.remove('show'); }
+
+// ── HELPERS ─────────────────────────────────────────────
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function dtStr(ts){ if(!ts) return ''; const d=new Date(ts*1000); return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
+function initials(n){ return (n||'?').trim().charAt(0).toUpperCase()||'?'; }
+
+// ── CONNECTION STATE ────────────────────────────────────
+socket.on('connect', ()=>{
+  document.getElementById('status-msg').textContent='Connected — waiting for status…';
+  const inv = params.get('invite');
+  if (inv) { socket.emit('redeem_invite', { code: inv, name: navigator.userAgent.slice(0,40) }); }
+  else if (HEAD_KEY) { socket.emit('auth', { key:HEAD_KEY, name: navigator.userAgent.slice(0,40) }); }
+  else { showAuthScreen(); }   // owner gate
+});
+socket.on('disconnect', ()=>{ document.getElementById('status-msg').textContent='Disconnected — reconnecting…'; });
+socket.on('wa_state', s=>{ if(s && s.state==='CONNECTED'){ hideQR(); } else { showQRNeeded(); } });
+socket.on('qr', url=>{ showQR(url); });
+socket.on('wa_logged_out', ()=>{ showQRNeeded(); });
+
+function showQR(url){
+  document.getElementById('qr-screen').style.display='flex';
+  document.getElementById('chatview').classList.remove('show');
+  document.getElementById('sidebar').classList.remove('hide');
+  document.getElementById('status-msg').textContent='Scan this QR with your main WhatsApp to link it.';
+  document.getElementById('qr-img').innerHTML = url ? '<img src="'+url+'">' : '';
+}
+function showQRNeeded(){ document.getElementById('status-msg').textContent='No WhatsApp linked. Scan the QR above with your main WhatsApp number.'; }
+function hideQR(){ document.getElementById('qr-screen').style.display='none'; }
+
+// ── CHATS ───────────────────────────────────────────────
+socket.on('chats_list', list=>{
+  S.chats = (list||[]).map(c=>({...c, unreadCount:c.unreadCount||0}));
+  renderChats();
+});
+function renderChats(){
+  const list = document.getElementById('chat-list');
+  const q = (S.filter||'').toLowerCase();
+  const items = S.chats.filter(c=> !q || (c.name||'').toLowerCase().includes(q) || (c.lastBody||'').toLowerCase().includes(q));
+  if(!items.length){ list.innerHTML='<div class="status-msg" style="padding:20px">No chats yet</div>'; return; }
+  list.innerHTML = items.map(c=>{
+    const av = c.picUrl ? '<img src="'+c.picUrl+'" onerror="this.parentElement.textContent=\\''+initials(c.name)+'\\'">' : initials(c.name);
+    const lastMedia = (c.lastMsgType && c.lastMsgType!=='chat') ? '['+c.lastMsgType+']' : '';
+    const last = c.lastMsg || lastMedia;
+    return '<div class="ci" onclick="openChat(\\''+c.id+'\\',\\''+esc(c.name).replace(/'/g,"\\'")+'\\','+c.isGroup+')\">'
+      + '<div class="ci-av">'+av+'</div>'
+      + '<div class="ci-main"><div class="ci-top"><div class="ci-name">'+esc(c.name)+'</div>'
+      + '<div class="ci-time">'+dtStr(c.lastMsgTime)+'</div></div>'
+      + '<div class="ci-last">'+esc(last).slice(0,60)+'</div></div></div>';
+  }).join('');
+}
+function handleSearch(v){ S.filter=v; renderChats(); }
+
+// ── OPEN CHAT ───────────────────────────────────────────
+function openChat(id, name, isGroup){
+  S.chatId=id; S.chatName=name; S.msgs=[]; S.msgIds=new Set(); S.replyTo=null;
+  const c=S.chats.find(x=>x.id===id); if(c) c.unreadCount=0;
+  document.getElementById('c-name').textContent=name;
+  document.getElementById('c-sub').textContent=isGroup?'Group':'';
+  const av=document.getElementById('c-av');
+  if(c&&c.picUrl) av.innerHTML='<img src="'+c.picUrl+'">'; else av.textContent=initials(name);
+  document.getElementById('messages').innerHTML='<div class="status-msg" style="margin:auto">⏳ Loading…</div>';
+  socket.emit('set_active_chat', id);
+  socket.emit('open_chat', { chatId:id });
+  if(window.innerWidth<=820){ document.getElementById('sidebar').classList.add('hide'); document.getElementById('chatview').classList.add('show'); }
+}
+function closeChat(){ document.getElementById('sidebar').classList.remove('hide'); document.getElementById('chatview').classList.remove('show'); }
+
+socket.on('chat_opened', ({ messages })=>{ S.msgs=[]; S.msgIds=new Set(); (messages||[]).forEach(addMsg); renderMsgs(); scrollBot(); });
+socket.on('new_message', m=>{ addMsg(m); if(m.chatId===S.chatId){ renderMsgs(); scrollBot(); } else { const c=S.chats.find(x=>x.id===m.chatId); if(c){c.unreadCount=(c.unreadCount||0)+1; renderChats();} } });
+socket.on('chat_metadata', ({ chatId, url, name })=>{ const c=S.chats.find(x=>x.id===chatId); if(c){ if(url) c.picUrl=url; if(name) c.name=name; renderChats(); if(chatId===S.chatId&&url){ document.getElementById('c-av').innerHTML='<img src="'+url+'">'; } } });
+socket.on('older_messages', ({ messages })=>{ (messages||[]).forEach(addMsg); renderMsgs(); });
+
+function addMsg(m){ if(!m||!m.id||S.msgIds.has(m.id)) return; S.msgIds.add(m.id); S.msgs.push(m); }
+function renderMsgs(){
+  const el=document.getElementById('messages');
+  S.msgs.sort((a,b)=>a.timestamp-b.timestamp);
+  el.innerHTML=S.msgs.map(m=>{
+    const out=m.isOutgoing?'out':'';
+    let media='';
+    if(m.mediaUrl){
+      if(m.mediaType&&m.mediaType.startsWith('image/')) media='<img class="m-img" src="'+m.mediaUrl+'" loading="lazy">';
+      else if(m.mediaType&&m.mediaType.startsWith('video/')) media='<video controls><source src="'+m.mediaUrl+'" type="'+m.mediaType+'"></video>';
+      else if(m.mediaType&&m.mediaType.startsWith('audio/')) media='<audio controls><source src="'+m.mediaUrl+'" type="'+m.mediaType+'"></audio>';
+      else media='<a class="m-doc" href="'+m.mediaUrl+'" download>📄 Download file</a>';
+    }
+    const body=m.body?esc(m.body).replace(/\n/g,'<br>'):'';
+    return '<div class="m-row '+out+'"><div class="m-bub">'+media+body
+      +'<div class="m-meta">'+(m.senderName&&!m.isOutgoing?'<span>'+esc(m.senderName)+'</span>':'')+'<span>'+dtStr(m.timestamp)+'</span></div></div></div>';
+  }).join('');
+}
+function scrollBot(){ const el=document.getElementById('messages'); el.scrollTop=el.scrollHeight; }
+
+// ── SEND ────────────────────────────────────────────────
+function autoGrow(t){ t.style.height='auto'; t.style.height=Math.min(t.scrollHeight,120)+'px'; }
+function handleAttach(files){
+  const f=files&&files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ pendingAttach={data:r.result,mime:f.type||'application/octet-stream',filename:f.name,ptt:f.type&&f.type.startsWith('audio/')};
+    const pv=document.getElementById('att-preview'); pv.classList.add('show'); document.getElementById('att-name').textContent=f.name;
+    const th=document.getElementById('att-thumb'); if(f.type&&f.type.startsWith('image/')){th.src=r.result;th.style.display='block';}else th.style.display='none'; };
+  r.readAsDataURL(f);
+}
+function clearAttach(){ pendingAttach=null; document.getElementById('att-preview').classList.remove('show'); document.getElementById('file-input').value=''; }
+function send(){
+  if(!S.chatId) return;
+  const inp=document.getElementById('msg-input'); const text=inp.value.trim();
+  if(pendingAttach){
+    const a=pendingAttach; const asDoc=!a.mime.startsWith('image/')&&!a.mime.startsWith('video/')&&!a.mime.startsWith('audio/');
+    socket.emit('send_media',{chatId:S.chatId,data:a.data,mime:a.mime,filename:a.filename,asDocument:asDoc,ptt:a.ptt});
+    clearAttach(); inp.value=''; inp.style.height='auto'; return;
+  }
+  if(!text) return;
+  socket.emit('send_message',{chatId:S.chatId,text,replyTo:S.replyTo&&S.replyTo.id});
+  inp.value=''; inp.style.height='auto';
+}
+document.getElementById('msg-input').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} });
+
+// ── SHARE ───────────────────────────────────────────────
+function openShare(){
+  const m=document.getElementById('share-modal'); m.classList.add('show');
+  document.getElementById('share-qr').innerHTML='<div class="status-msg">Loading…</div>';
+  fetch('/api/share-qr').then(x=>x.json()).then(r=>{
+    if(!r.ok){ document.getElementById('share-qr').innerHTML='<div class="status-msg">Not available</div>'; return; }
+    window.__shareUrl=r.url;
+    document.getElementById('share-qr').innerHTML='<img src="'+r.qr+'" style="width:240px;height:240px;background:#fff;padding:8px;border-radius:8px">';
+  }).catch(()=>{ document.getElementById('share-qr').innerHTML='<div class="status-msg">Failed</div>'; });
+}
+function copyShareLink(){ if(window.__shareUrl) navigator.clipboard.writeText(window.__shareUrl).then(()=>toast('Link copied')); }
+
+toast('Connecting…');
+</script>
+</body>
+</html>

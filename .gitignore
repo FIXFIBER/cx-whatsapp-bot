@@ -1,0 +1,25 @@
+# Secrets & keys (never commit)
+.env
+.env.*
+!.env.example
+
+# WhatsApp session + runtime state (lives on the persistent disk in prod)
+session/
+cache/
+data/
+baileys_store.json
+contact_cache.json
+contacts.json
+devices.json
+scheduled.json
+call_block.json
+
+# Stray/unrelated files sometimes dropped in this folder
+gmail_*
+gmail_cache_*
+outlook_config.json
+graph_*.json
+*.log
+
+# Deps & tooling
+node_modules/
