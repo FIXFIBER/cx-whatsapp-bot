@@ -1,29 +1,32 @@
-# Render backend deploy manifest
-# The WhatsApp bot is STATEFUL (persistent socket + Baileys auth session),
-# so it MUST run on a long-lived server like Render — NOT Vercel.
-# The frontend (web-client/) is deployed separately on Vercel and connects
-# to this service over socket.io (CORS is *).
-
+# Render deploy manifest — ONE service runs the bot AND serves the web client.
+# The bot is STATEFUL (persistent WhatsApp socket + Baileys session), so it must
+# run on a long-lived server with a persistent disk. The web client is served by
+# the bot itself at /app, so there is NO separate frontend host and NO custom domain
+# required.
 services:
   - type: web
     name: cx-whatsapp-bot
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: starter          # or standard — needs to stay awake (no free tier spin-down for WS)
+    plan: starter          # Starter (paid) stays awake; the free plan spins down and kills the WhatsApp socket
     healthCheckPath: /
     envVars:
       - key: PORT
         value: "3001"
       - key: DATA_DIR
         value: "/data"      # persistent disk mount (see disks below)
+      # PUBLIC_URL auto-defaults to Render's RENDER_EXTERNAL_URL, so the
+      # invite/share QR works with zero config. Override only if you put a
+      # custom domain (e.g. cx.fob.net.ng) in front of this service.
       - key: PUBLIC_URL
-        value: "https://cx.fob.net.ng"   # used for the Share-Access QR
+        sync: false
       - key: SUPABASE_URL
         sync: false
-      - key: SUPABASE_KEY
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-    # Persistent disk: keeps the WhatsApp session + cache across deploys/restarts.
-    # WITHOUT this, every deploy re-scans the QR and you lose the link.
+    # Persistent disk: keeps the WhatsApp session + device registry across
+    # deploys/restarts. WITHOUT this, every deploy re-scans the QR and you
+    # lose the link.
     disks:
       - name: cx-data
         mountPath: /data

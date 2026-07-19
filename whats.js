@@ -113,7 +113,7 @@ const supa = require('./supabase/sync');
 const access = require('./access');
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
-const PUBLIC_URL = process.env.PUBLIC_URL || ''; // e.g. https://cx.fob.net.ng — used for the share-access QR
+const PUBLIC_URL = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || ''; // base URL for the share-access / invite QR (auto-set on Render)
 const DATA_DIR = process.env.DATA_DIR || '.';          // Render persistent disk mount (e.g. /data)
 const SESSION_DIR = DATA_DIR + '/session';
 const CACHE_DIR = DATA_DIR + '/cache';
