@@ -228,6 +228,9 @@
     </div>
   </div>
 
+  <!-- live connection banner -->
+  <div id="conn-banner" style="position:fixed;top:0;left:0;right:0;z-index:9999;display:none;padding:8px 14px;font-size:13px;font-weight:600;text-align:center;color:#fff"></div>
+
   <!-- QR / status screen -->
   <div id="qr-screen">
     <div id="qr-img"></div>
@@ -269,7 +272,7 @@ const params = new URLSearchParams(location.search);
 // Polling-only: Render's free proxy does not reliably proxy the socket.io
 // websocket upgrade, which left the browser stuck on "Connecting…".
 // Long-polling is plain HTTPS — proven to work through the proxy.
-const socket = io({ transports: ['polling'] });
+const socket = io({ transports: ['polling'], reconnection:true, reconnectionAttempts:Infinity, reconnectionDelay:800, reconnectionDelayMax:4000, timeout:20000 });
 const S = { chats:[], msgs:[], msgIds:new Set(), chatId:null, chatName:'', replyTo:null, filter:'' };
 let pendingAttach = null;
 let AUTH = { role:'guest', approved:false, deviceId:null, headKey:null };
@@ -344,14 +347,20 @@ function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.
 function initials(n){ return (n||'?').trim().charAt(0).toUpperCase()||'?'; }
 
 // ── CONNECTION STATE ────────────────────────────────────
+function banner(text, color){ const b=document.getElementById('conn-banner'); b.textContent=text; b.style.background=color; b.style.display=text?'block':'none'; }
 socket.on('connect', ()=>{
+  banner('', null);   // clear any error banner
   document.getElementById('status-msg').textContent='Connected — waiting for status…';
   const inv = params.get('invite');
   if (inv) { socket.emit('redeem_invite', { code: inv, name: navigator.userAgent.slice(0,40) }); }
   else if (HEAD_KEY) { socket.emit('auth', { key:HEAD_KEY, name: navigator.userAgent.slice(0,40) }); }
   else { showAuthScreen(); }   // owner gate
 });
-socket.on('disconnect', ()=>{ document.getElementById('status-msg').textContent='Disconnected — reconnecting…'; });
+socket.on('disconnect', (reason)=>{ banner('Reconnecting… ('+reason+')', '#a8521e'); });
+socket.on('connect_error', (err)=>{ banner('Connection error — retrying… '+(err && err.message || ''), '#a8521e'); });
+socket.io.on('reconnect_attempt', (n)=>{ banner('Reconnecting… (attempt '+n+')', '#a8521e'); });
+socket.io.on('reconnect', ()=>{ banner('', null); });
+socket.io.on('reconnect_failed', ()=>{ banner('Could not reach the server. Check your connection and refresh.', '#a83232'); });
 socket.on('wa_state', s=>{ if(s && s.state==='CONNECTED'){ hideQR(); } else { showQRNeeded(); } });
 socket.on('qr', url=>{ showQR(url); });
 socket.on('wa_logged_out', ()=>{ showQRNeeded(); });
