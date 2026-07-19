@@ -153,7 +153,10 @@
         <span class="app-name">CX WhatsApp</span>
       </div>
       <div class="s-actions">
-        <button class="icon-btn" title="Link a phone (owner only)" onclick="openShare()" id="share-btn" style="display:none">
+        <button class="icon-btn" title="Connect / Re-scan WhatsApp QR (owner only)" onclick="requestPairingQR()" id="connect-btn" style="display:none">
+          <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/></svg>
+        </button>
+        <button class="icon-btn" title="Share access (invite QR)" onclick="openShare()" id="share-btn" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
         </button>
         <button class="icon-btn" title="My devices (owner only)" onclick="openHeadPanel()" id="head-btn" style="display:none">
@@ -286,10 +289,13 @@ socket.on('auth_ok', d=>{
   document.getElementById('auth-screen').style.display='none';
   if (AUTH.role==='head') {
     document.getElementById('head-btn').style.display='flex';
+    document.getElementById('connect-btn').style.display='flex';
     document.getElementById('head-key-view').value = AUTH.headKey || '';
     renderDevices(d.devices||[]);
     // Owner sees the WhatsApp pairing QR screen (to link the main phone number).
     document.getElementById('share-btn') && (document.getElementById('share-btn').style.display='flex');
+    // Auto-pop the REAL WhatsApp pairing QR (phone scans this to link the number).
+    if (lastQR || d.bootstrapped) requestPairingQR();
   } else {
     // Shared/member users: no pairing QR, no Share button, no My Devices.
     document.getElementById('share-btn') && (document.getElementById('share-btn').style.display='none');
@@ -367,7 +373,12 @@ socket.on('connect_error', (err)=>{ banner('Connection error — retrying… '+(
 socket.io.on('reconnect_attempt', (n)=>{ banner('Reconnecting… (attempt '+n+')', '#a8521e'); });
 socket.io.on('reconnect', ()=>{ banner('', null); });
 socket.io.on('reconnect_failed', ()=>{ banner('Could not reach the server. Check your connection and refresh.', '#a83232'); });
-socket.on('wa_state', s=>{ if(s && s.state==='CONNECTED'){ hideQR(); } else { showQRNeeded(); } });
+socket.on('wa_state', s=>{
+  const st = (s && s.state) || s;
+  if (st==='CONNECTED'){ hideQR(); }
+  else if (AUTH.role==='head'){ showQRNeeded(); }   // NEEDS_PAIRING / DISCONNECTED -> show QR screen + prompt
+  else { showQRNeeded(); }
+});
 socket.on('qr', url=>{ showQR(url); });
 socket.on('wa_logged_out', ()=>{ showQRNeeded(); });
 
@@ -379,10 +390,17 @@ function showQR(url){
   document.getElementById('chatview').classList.remove('show');
   document.getElementById('sidebar').classList.remove('hide');
   document.getElementById('status-msg').textContent='Scan this QR with your main WhatsApp to link it.';
-  document.getElementById('qr-img').innerHTML = url ? '<img src="'+url+'">' : '';
+  document.getElementById('qr-img').innerHTML = url ? '<img src="'+url+'">' : '<div class="status-msg">Waiting for QR…</div>';
 }
-function showQRNeeded(){ document.getElementById('status-msg').textContent='No WhatsApp linked. Scan the QR above with your main WhatsApp number.'; }
+function showQRNeeded(){
+  if (AUTH.role!=='head'){ return; }
+  document.getElementById('qr-screen').style.display='flex';
+  document.getElementById('chatview').classList.remove('show');
+  document.getElementById('qr-img').innerHTML='<div class="status-msg">No WhatsApp linked yet.</div>';
+  document.getElementById('status-msg').textContent='Link your main WhatsApp number: tap “Connect / Re-scan” below, then scan the QR with your phone.';
+}
 function hideQR(){ document.getElementById('qr-screen').style.display='none'; }
+function requestPairingQR(){ if (AUTH.role!=='head'){ toast('Only the owner can link a number'); return; } socket.emit('request_qr', AUTH.headKey); }
 
 // ── CHATS ───────────────────────────────────────────────
 socket.on('chats_list', list=>{

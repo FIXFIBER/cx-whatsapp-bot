@@ -927,6 +927,9 @@ io.on('connection', (socket) => {
         if (access.isHead(key)) {
             deviceId = 'head'; deviceRole = 'head';
             socket.emit('auth_ok', { role: 'head', headKey: access.HEAD_KEY, devices: access.listDevices() });
+            // Re-emit the REAL WhatsApp pairing QR to the freshly-authed owner so
+            // it never gets swallowed by the pre-auth role guard in the client.
+            if (lastQR) { socket.emit('qr', lastQR); socket.emit('wa_state', needsPairing ? 'NEEDS_PAIRING' : currentState); }
         } else if (access.isBootstrap()) {
             // First-claim: no admin key set and no devices yet → this device is the owner.
             deviceId = access.makeHead(name || 'Owner');
@@ -935,6 +938,21 @@ io.on('connection', (socket) => {
         } else {
             socket.emit('auth_fail', { reason: 'not_head' });
         }
+    });
+
+    socket.on('request_qr', async (key) => {
+        if (!access.isHead(key)) return socket.emit('auth_fail', { reason: 'head_only' });
+        // Force a fresh WhatsApp pairing QR: wipe the session so Baileys emits a
+        // brand-new QR the phone can scan to (re)link this number.
+        try {
+            if (sock) { try { await sock.logout(); } catch (e) {} }
+            fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+            fs.mkdirSync(SESSION_DIR, { recursive: true });
+            console.log('request_qr: session wiped, regenerating pairing QR');
+            // connectToBaileys() is triggered by the close handler; if not, nudge it.
+            setTimeout(() => { if (!isClientReady && !lastQR) connectToBaileys(); }, 1800);
+        } catch (e) { console.error('request_qr error:', e.message); }
+        socket.emit('wa_state', 'NEEDS_PAIRING');
     });
 
     // Head (or any approved device) mints a single-use invite QR.
