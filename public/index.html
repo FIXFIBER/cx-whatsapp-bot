@@ -266,7 +266,10 @@
 <script>
 // ── CONFIG: same-origin (the bot serves this client) ──
 const params = new URLSearchParams(location.search);
-const socket = io();   // same origin; socket.io negotiates polling→websocket
+// Polling-only: Render's free proxy does not reliably proxy the socket.io
+// websocket upgrade, which left the browser stuck on "Connecting…".
+// Long-polling is plain HTTPS — proven to work through the proxy.
+const socket = io({ transports: ['polling'] });
 const S = { chats:[], msgs:[], msgIds:new Set(), chatId:null, chatName:'', replyTo:null, filter:'' };
 let pendingAttach = null;
 let AUTH = { role:'guest', approved:false, deviceId:null, headKey:null };
@@ -318,9 +321,10 @@ function renderDevices(list){
     const tag = d.role==='head'?'<span class="tag head">HEAD</span>':(d.approved?'<span class="tag ok">APPROVED</span>':'<span class="tag pend">PENDING</span>');
     let act='';
     if(d.role!=='head'){
+      const idAttr = JSON.stringify(d.id);
       act = d.approved
-        ? '<button class="mini danger" onclick="removeDev(\''+d.id+'\')">Remove</button>'
-        : '<button class="mini" onclick="approveDev(\''+d.id+'\')">Approve</button> <button class="mini danger" onclick="removeDev(\''+d.id+'\')">Remove</button>';
+        ? '<button class="mini danger" onclick="removeDev('+idAttr+')">Remove</button>'
+        : '<button class="mini" onclick="approveDev('+idAttr+')">Approve</button> <button class="mini danger" onclick="removeDev('+idAttr+')">Remove</button>';
     }
     return '<div class="dev-row">'+tag+'<span class="dev-name">'+esc(d.name)+'</span>'+act+'</div>';
   }).join('');
@@ -373,10 +377,10 @@ function renderChats(){
   const items = S.chats.filter(c=> !q || (c.name||'').toLowerCase().includes(q) || (c.lastBody||'').toLowerCase().includes(q));
   if(!items.length){ list.innerHTML='<div class="status-msg" style="padding:20px">No chats yet</div>'; return; }
   list.innerHTML = items.map(c=>{
-    const av = c.picUrl ? '<img src="'+c.picUrl+'" onerror="this.parentElement.textContent=\\''+initials(c.name)+'\\'">' : initials(c.name);
+    const av = c.picUrl ? '<img src="'+c.picUrl+'" alt="'+esc(c.name)+'" onerror="this.style.display=\'none\'">' : initials(c.name);
     const lastMedia = (c.lastMsgType && c.lastMsgType!=='chat') ? '['+c.lastMsgType+']' : '';
     const last = c.lastMsg || lastMedia;
-    return '<div class="ci" onclick="openChat(\\''+c.id+'\\',\\''+esc(c.name).replace(/'/g,"\\'")+'\\','+c.isGroup+')\">'
+    return '<div class="ci" onclick="openChat('+JSON.stringify(c.id)+','+JSON.stringify(c.name)+','+c.isGroup+')">'
       + '<div class="ci-av">'+av+'</div>'
       + '<div class="ci-main"><div class="ci-top"><div class="ci-name">'+esc(c.name)+'</div>'
       + '<div class="ci-time">'+dtStr(c.lastMsgTime)+'</div></div>'
