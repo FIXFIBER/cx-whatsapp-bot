@@ -1,0 +1,25 @@
+name: keepalive
+# Keeps the Render FREE-tier instance awake 24/7 by pinging it every 10 minutes.
+# Render free web services sleep after 15 min of inactivity; this external ping
+# prevents that so the WhatsApp bot stays connected without any manual action.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping bot health endpoint
+        run: |
+          set +e
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 "https://cx-whatsapp-bot.onrender.com/" )
+            echo "attempt $i -> HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 5
+          done
+          echo "ping did not return 200 (instance may be cold-starting; next run will retry)"
+          exit 0
